@@ -3,12 +3,15 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title>LD32 Test Page</title>
+    <link rel="stylesheet" href="fonts/lintel.css">
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background: black;
             font-size: 1.5em;
+            color: #b0a6ca;
+            font-family: lintelregular, sans-serif;
         }
         canvas {
             z-index: 10;
@@ -16,23 +19,44 @@
         #msg-banner {
             width: 50%;
             bottom: 20px;
+            border-left: 32px solid #9370db;
+            border-bottom: 2px solid #9370db;
+            border-right: 32px solid #9370db;
+            margin: auto;
+        }
+        #status-banner {
+            width: 50%;
+            top: 20px;
+            border-left: 32px solid #9370db;
+            border-top: 2px solid #9370db;
+            border-right: 32px solid #9370db;
+            margin: auto;
+            display: none;
+        }
+        #left-dialogue {
+            border-left: 32px solid #9370db;
+            border-top: 2px solid #9370db;
+            top: 40px;
+            left: 40px;
+            width: 20%;
+            min-height: 500px;
+            display: none;
         }
         .banner {
+            background: rgba(147, 112, 219, 0.50);
             position: fixed;
             left: 0;
             right: 0;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.5);
-            border-left: 4px solid white;
-            border-bottom: 1px solid white;
             text-align: center;
-            margin: auto;
             padding: 0.2em;
         }
     </style>
 </head>
 <body>
 <div id="msg-banner" class="banner">Loading scripts</div>
+<div id="status-banner" class="banner"></div>
+<div id="left-dialogue" class="banner"></div>
 
 <script src="js-ext/perlin.js"></script>
 <script src="js-ext/three.min.js"></script>

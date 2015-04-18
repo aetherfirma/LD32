@@ -17,7 +17,7 @@ function generate_heightmap(size, scale, water_coverage) {
         height_distribution = new Uint32Array(256),
         start = +new Date,
         height, x, y, height_mod, underwater, slope_value, bump_height,
-        slope_cutoff = 0.35, beach_cutoff = 0.1, bump_modifier,
+        slope_cutoff = 0.36, beach_cutoff = 0.1, bump_modifier,
         world = {
             "get": function (coord) {
                 if (coord.x < 0 || coord.x >= size || coord.y < 0 || coord.y >= size) {
@@ -61,9 +61,9 @@ function generate_heightmap(size, scale, water_coverage) {
             height_mod = height / 256;
             underwater = height <= world.sealevel;
             slope_value = get_slope(world, {x: x, y: y}) / Math.PI;
+            //if (!underwater) console.log(slope_value);
             bump_height = Math.round((height - world.sealevel) / bump_modifier * 255);
-            //type[size * y + x] = (underwater ? WATER : (bump_height < (bump_modifier * beach_cutoff) ? BEACH : (slope_value < slope_cutoff ? MOUNTAIN : LAND)));
-            type[size * y + x] = (underwater ? (height > (sea_level - (bump_modifier * beach_cutoff)) ? SHORE : WATER) : (bump_height < (bump_modifier * beach_cutoff) ? BEACH : (slope_value < slope_cutoff ? MOUNTAIN : LAND)));
+            type[size * y + x] = (underwater ? (height > (sea_level - (bump_modifier * beach_cutoff)) ? SHORE : WATER) : (bump_height < (bump_modifier * beach_cutoff) ? BEACH : (slope_value > slope_cutoff ? MOUNTAIN : LAND)));
         }
     }
 
@@ -85,14 +85,15 @@ function get_slope(world, coord) {
         {x: coord.x - 1, y: coord.y + 1},
         {x: coord.x - 1, y: coord.y - 1}
         ],
-        neighbour, n, height_delta, slopes = [];
+        neighbour, n, height_delta, slopes = [], angle;
     for (n in neighbours) {
         neighbour = neighbours[n];
         if (neighbour.x < 0 || neighbour.x >= world.size || neighbour.y < 0 || neighbour.y >= world.size) {
             continue;
         }
         height_delta = Math.abs(world.get(neighbour) - world.get(coord));
-        slopes.push(Math.atan2(height_delta, 1));
+        angle = Math.atan2(height_delta, 1);
+        if (!isNaN(angle)) slopes.push(angle);
     }
     return Array.max(slopes);
 }
@@ -149,7 +150,7 @@ function generate_spec_map(world) {
         y = Math.floor(p / world.size);
 
         underwater = height <= world.sealevel;
-        spec_value = underwater ? 50 : 0;
+        spec_value = underwater ? 100 : 0;
 
         spec.data[r] = spec_value;
         spec.data[g] = spec_value;
@@ -196,4 +197,17 @@ function generate_diff_map(world) {
     diff_tex.putImageData(diff, 0, 0);
 
     return diff_tex.canvas;
+}
+
+function generate_buildings(world) {
+    var buildings = [], cities = [], objects = [],
+        building, object;
+
+    for (var n = 0; n < 20; n++) {
+        building = {
+            affiliation: null,
+            height: Math.randint(2, 10),
+
+        }
+    }
 }

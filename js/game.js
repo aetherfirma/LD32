@@ -1,12 +1,81 @@
 function main() {
-    var renderer, world, textures = {}, surface, light, msg_banner = $("#msg-banner"), time = 0, last_frame, paused = false, length_of_day = 30000;
+    var renderer, world, textures = {}, surface, light,
+        msg_banner = $("#msg-banner"), status_banner = $("#status-banner"),
+        time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 1,
+        start_year = 2143, start_date = 56, m, next_year, calendar_day;
+
+    function current_time() {
+        var day, month, year, time_of_day, hour, minutes,
+            days_of_the_week = [
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday"
+            ], months_of_the_year = [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December"
+            ], month_lengths = [
+                31,
+                28,
+                31,
+                30,
+                31,
+                30,
+                31,
+                31,
+                30,
+                31,
+                30,
+                31
+            ];
+
+        calendar_day = Math.floor(time / length_of_day);
+        day = calendar_day + start_date;
+        calendar_day = days_of_the_week[calendar_day % 7];
+        year = start_year;
+        do {
+            next_year = false;
+            for (m in month_lengths) {
+                if (day > month_lengths[m]) {
+                    day -= month_lengths[m];
+                    next_year = true;
+                } else {
+                    next_year = false;
+                    break;
+                }
+            }
+            if (next_year) {
+                year++;
+            }
+        } while (next_year);
+        month = months_of_the_year[m];
+
+        time_of_day = ((time % length_of_day) / length_of_day) * 24 * 60;
+        hour = Math.floor(time_of_day / 60);
+        minutes = Math.floor(time_of_day % 60);
+
+        return hour + ":" + minutes + " " + calendar_day + " " + day + " " + month + " " + year;
+    }
 
     function tick() {
         var now  = +new Date, dt = now - last_frame, time_of_day;
         if (!paused) {
-            time += dt;
+            time += dt * game_speed;
         }
-        time_of_day = time % length_of_day;
+        time_of_day = (time - (length_of_day * 0.55)) % length_of_day;
 
         requestAnimationFrame(tick);
         light.position.set(
@@ -15,6 +84,7 @@ function main() {
                 Math.cos(Math.PI*2*(time_of_day/length_of_day)) * 50
         );
         renderer.renderer.render(renderer.scene, renderer.camera);
+        status_banner.text(current_time());
         last_frame = now;
     }
 
@@ -55,6 +125,7 @@ function main() {
         },
         function () {
             document.body.appendChild(renderer.renderer.domElement);
+            status_banner.show();
             last_frame = +new Date;
             tick();
         },
