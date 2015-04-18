@@ -15,3 +15,25 @@ function setup_renderer() {
         camera: camera
     }
 }
+
+function create_render_surface(textures) {
+    var t_texture = new THREE.Texture(textures.diff),
+        t_bump = new THREE.Texture(textures.bump),
+        t_specular = new THREE.Texture(textures.spec);
+    t_texture.needsUpdate = true;
+    t_texture.magFilter = THREE.NearestFilter;
+    t_bump.needsUpdate = true;
+    t_bump.magFilter = THREE.NearestFilter;
+    t_specular.needsUpdate = true;
+    t_specular.magFilter = THREE.NearestFilter;
+    return new THREE.Mesh(
+        new THREE.PlaneBufferGeometry(100,100),
+        new THREE.MeshPhongMaterial({
+            map: t_texture,
+            bumpMap: t_bump,
+            bumpScale: 20,
+            specularMap: t_specular,
+            specular: new THREE.Color("grey"),
+        })
+    );
+}

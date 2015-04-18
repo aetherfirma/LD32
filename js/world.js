@@ -2,6 +2,7 @@ WATER = 0;
 BEACH = 1;
 LAND = 2;
 MOUNTAIN = 3;
+SHORE = 4;
 
 function generate_heightmap(size, scale, water_coverage) {
     if (scale === undefined) {
@@ -61,7 +62,8 @@ function generate_heightmap(size, scale, water_coverage) {
             underwater = height <= world.sealevel;
             slope_value = get_slope(world, {x: x, y: y}) / Math.PI;
             bump_height = Math.round((height - world.sealevel) / bump_modifier * 255);
-            type[size * y + x] = (underwater ? WATER : (bump_height < (bump_modifier * beach_cutoff) ? BEACH : (slope_value < slope_cutoff ? MOUNTAIN : LAND)));
+            //type[size * y + x] = (underwater ? WATER : (bump_height < (bump_modifier * beach_cutoff) ? BEACH : (slope_value < slope_cutoff ? MOUNTAIN : LAND)));
+            type[size * y + x] = (underwater ? (height > (sea_level - (bump_modifier * beach_cutoff)) ? SHORE : WATER) : (bump_height < (bump_modifier * beach_cutoff) ? BEACH : (slope_value < slope_cutoff ? MOUNTAIN : LAND)));
         }
     }
 
@@ -95,17 +97,24 @@ function get_slope(world, coord) {
     return Array.max(slopes);
 }
 
-function generate_texture_maps(world, context) {
-    var bump = context.createImageData(world.size, world.size),
-        spec = context.createImageData(world.size, world.size),
-        slope = context.createImageData(world.size, world.size),
-        tex = context.createImageData(world.size, world.size),
+function generate_texture_maps(world) {
+    var bump_tex = document.createElement("canvas").getContext("2d"),
+        bump = bump_tex.createImageData(world.size, world.size),
+        spec_tex = document.createElement("canvas").getContext("2d"),
+        spec = spec_tex.createImageData(world.size, world.size),
+        diff_tex = document.createElement("canvas").getContext("2d"),
+        diff = diff_tex.createImageData(world.size, world.size),
         p, r, g, b, a, x, y, bump_modifier = 255 - world.sealevel,
         bump_height, spec_value, slope_value, underwater, height, height_mod,
         water_r = 122, water_g = 196, water_b = 245,
+        shore_r = 194, shore_g = 231, shore_b = 237,
         land_r = 119, land_g = 168, land_b = 120,
-        beach_r = 243, beach_g = 233, beach_b = 167, beach_cutoff = 0.1,
-        mountain = 235, slope_cutoff = 90, cell_type;
+        beach_r = 243, beach_g = 233, beach_b = 167,
+        mountain = 235, cell_type;
+
+    bump_tex.canvas.width = bump_tex.canvas.height = world.size;
+    spec_tex.canvas.width = spec_tex.canvas.height = world.size;
+    diff_tex.canvas.width = diff_tex.canvas.height = world.size;
 
     for (p = 0; p < world.size * world.size; p++) {
         r = p * 4;
@@ -125,10 +134,10 @@ function generate_texture_maps(world, context) {
 
         cell_type = world.get_type({x: x, y: y});
 
-        tex.data[r] = Math.round((cell_type === WATER ? water_r : (cell_type === BEACH ? beach_r : (cell_type === MOUNTAIN ? mountain : land_r))) * height_mod);
-        tex.data[g] = Math.round((cell_type === WATER ? water_g : (cell_type === BEACH ? beach_g : (cell_type === MOUNTAIN ? mountain : land_g))) * height_mod);
-        tex.data[b] = Math.round((cell_type === WATER ? water_b : (cell_type === BEACH ? beach_b : (cell_type === MOUNTAIN ? mountain : land_b))) * height_mod);
-        tex.data[a] = 255;
+        diff.data[r] = Math.round((cell_type === WATER ? water_r : (cell_type === SHORE ? shore_r : (cell_type === BEACH ? beach_r : (cell_type === MOUNTAIN ? mountain : land_r)))) * height_mod);
+        diff.data[g] = Math.round((cell_type === WATER ? water_g : (cell_type === SHORE ? shore_g : (cell_type === BEACH ? beach_g : (cell_type === MOUNTAIN ? mountain : land_g)))) * height_mod);
+        diff.data[b] = Math.round((cell_type === WATER ? water_b : (cell_type === SHORE ? shore_b : (cell_type === BEACH ? beach_b : (cell_type === MOUNTAIN ? mountain : land_b)))) * height_mod);
+        diff.data[a] = 255;
 
         bump.data[r] = bump_height;
         bump.data[g] = bump_height;
@@ -139,12 +148,15 @@ function generate_texture_maps(world, context) {
         spec.data[g] = spec_value;
         spec.data[b] = spec_value;
         spec.data[a] = 255;
-
-        slope.data[r] = slope_value;
-        slope.data[g] = slope_value;
-        slope.data[b] = underwater ? 255 : slope_value;
-        slope.data[a] = 255;
     }
 
-    return {"bump": bump, "spec": spec, "slope": slope, "tex": tex};
+    bump_tex.putImageData(bump, 0, 0);
+    spec_tex.putImageData(spec, 0, 0);
+    diff_tex.putImageData(diff, 0, 0);
+
+    return {
+        "bump": bump_tex.canvas,
+        "spec": spec_tex.canvas,
+        "diff": diff_tex.canvas
+    };
 }
