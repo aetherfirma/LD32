@@ -23,7 +23,6 @@ function create_render_surface(textures) {
     t_texture.needsUpdate = true;
     t_texture.magFilter = THREE.NearestFilter;
     t_bump.needsUpdate = true;
-    t_bump.magFilter = THREE.NearestFilter;
     t_specular.needsUpdate = true;
     t_specular.magFilter = THREE.NearestFilter;
     return new THREE.Mesh(

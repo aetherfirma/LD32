@@ -7,23 +7,40 @@
         body {
             margin: 0;
             overflow: hidden;
+            background: black;
+            font-size: 1.5em;
         }
         canvas {
             z-index: 10;
         }
+        #msg-banner {
+            width: 50%;
+            bottom: 20px;
+        }
+        .banner {
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.5);
+            border-left: 4px solid white;
+            border-bottom: 1px solid white;
+            text-align: center;
+            margin: auto;
+            padding: 0.2em;
+        }
     </style>
 </head>
 <body>
+<div id="msg-banner" class="banner">Loading scripts</div>
+
 <script src="js-ext/perlin.js"></script>
 <script src="js-ext/three.min.js"></script>
+<script src="js-ext/jquery-1.10.2.min.js"></script>
 
 <script src="js/util.js"></script>
 <script src="js/world.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/game.js"></script>
-
-<script>
-    main()
-</script>
 </body>
 </html>
