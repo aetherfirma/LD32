@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>LD32 Test Page</title>
+</head>
+<body>
+<canvas id="bump" width="512" height="512"></canvas>
+<canvas id="slope" width="512" height="512"></canvas>
+<canvas id="spec" width="512" height="512"></canvas>
+<canvas id="tex" width="512" height="512"></canvas>
+
+<script src="js-ext/perlin.js"></script>
+<script src="js-ext/three.min.js"></script>
+
+<script src="js/util.js"></script>
+<script src="js/world.js"></script>
+
+<script>
+    var bump = document.getElementById("bump"),
+        spec = document.getElementById("spec"),
+        slope = document.getElementById("slope"),
+        tex = document.getElementById("tex"),
+        bump_ctx = bump.getContext("2d"),
+        spec_ctx = spec.getContext("2d"),
+        slope_ctx = slope.getContext("2d"),
+        tex_ctx = tex.getContext("2d"),
+        world, texs;
+
+    function put_tex(ctx, tex, size) {
+        ctx.canvas.width = ctx.canvas.height = size;
+        ctx.putImageData(tex, 0, 0);
+    }
+
+    function gen(scale) {
+        world = generate_heightmap(1024, scale, 0.6);
+        texs = generate_texture_maps(world, bump_ctx);
+        put_tex(bump_ctx, texs.bump, 1024);
+        put_tex(spec_ctx, texs.spec, 1024);
+        put_tex(slope_ctx, texs.slope, 1024);
+        put_tex(tex_ctx, texs.tex, 1024);
+    }
+    gen();
+</script>
+</body>
+</html>
