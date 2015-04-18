@@ -33,6 +33,7 @@ function create_render_surface(textures) {
             bumpScale: 20,
             specularMap: t_specular,
             specular: new THREE.Color("grey"),
+            transparent: true
         })
     );
 }
