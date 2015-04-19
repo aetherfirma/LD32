@@ -93,6 +93,111 @@ function main() {
         }
     }
 
+    function name_person(person) {
+        if (person.known) {
+            return person.name + " (" + FACTIONS[person.affiliation] + ")";
+        } else {
+            return person.name;
+        }
+    }
+
+    function describe_person(person) {
+        var span = $("<span></span>"), action, cost;
+        span.append($("<span>" + name_person(person) + "</span>"));
+
+        if (!person.known) {
+            action = $("<a href='javascript:void'>Ask handler about this person </a>");
+            if (handler_busy) {
+                action.click(function () {
+                    append_to_timeline(timeline_list, "Your handler tells you to stop calling. They're still busy with your last request.")
+                })
+            } else {
+                cost = length_of_day / 24 / 6 * Math.randint(2, 6);
+                action.click(function () {
+                    append_to_timeline(timeline_list, "Your handler writes down the persons name and says they'll get back to you in about " + describe_time(cost, length_of_day) + ".");
+                    described_building = undefined;
+                    handler_busy = true;
+                    schedule.push({"due": time + cost, "do": function () {
+                        handler_busy = false;
+                        person.known = true;
+                        described_building = undefined;
+                        append_to_timeline(timeline_list, "You get a call from your handler. It turns out that " + person.name + " works for " + FACTIONS[person.affiliation] + ".");
+                    }})
+                })
+            }
+            span.append($("<span> - </span>"));
+            span.append(action);
+        }
+
+        if (!person.talked && person.location === player_building) {
+            action = $("<a href='javascript:void'>Talk</a>");
+            action.click(function () {
+                var part;
+                person.talked = true;
+                described_building = undefined;
+                if (Math.random() > person.disposition) {
+                    append_to_timeline(timeline_list, "You spoke to " + person.name + " but they told you to go take a hike.");
+                } else {
+                    if (person.affiliation === NEUTRAL) {
+                        part = Array.choice([0, 1, 2]);
+                    } else if (person.affiliation === sphere.affiliation) {
+                        part = 0;
+                    } else if (person.affiliation === relay.affiliation) {
+                        part = 1;
+                    } else if (person.affiliation === generator.affiliation) {
+                        part = 2;
+                    }
+
+                    if (Math.random() > 0.5) {
+                        append_to_timeline(timeline_list, "You spoke to " + person.name + " but they told you they saw " + (person.affiliation === NEUTRAL ? "some " + Array.choice(FACTIONS) + " people" : "someone") + " loading something into " + Array.choice(world.building_meshes).building.name + ".");
+                    } else {
+                        if (part == 0) {
+                            append_to_timeline(timeline_list, "You spoke to " + person.name + " but they told you they saw " + (person.affiliation === NEUTRAL ? "some " + FACTIONS[sphere.affiliation] + " people" : "someone") + " loading something into " + sphere.location.name + ".");
+                        } else if (part == 1) {
+                            append_to_timeline(timeline_list, "You spoke to " + person.name + " but they told you they saw " + (person.affiliation === NEUTRAL ? "some " + FACTIONS[relay.affiliation] + " people" : "someone") + " loading something into " + relay.location.name + ".");
+                        } else if (part == 2) {
+                            append_to_timeline(timeline_list, "You spoke to " + person.name + " but they told you they saw " + (person.affiliation === NEUTRAL ? "some " + FACTIONS[generator.affiliation] + " people" : "someone") + " loading something into " + generator.location.name + ".");
+                        }
+                    }
+                }
+            });
+            span.append($("<span> - </span>"));
+            span.append(action);
+        }
+
+        if (person === sphere && person.location === player_building) {
+            action = $("<a href='javascript:void'>Take the Correction Sphere</a>");
+            action.click(function () {
+                sphere = null;
+                append_to_timeline(timeline_list, "You wrestle the sphere from " + person.name + " and store it safely on your person. You briefly worry how safe it is in your sock, but cast it out of your mind.");
+            });
+            span.append($("<span> - </span>"));
+            span.append(action);
+        }
+
+        if (person === relay && person.location === player_building) {
+            action = $("<a href='javascript:void'>Take the Affirmation Relay</a>");
+            action.click(function () {
+                relay = null;
+                append_to_timeline(timeline_list, "You beat the relay out of " + person.name + " and store it safely on your person. It's a little bulky in your pocket, but it's safer than holding it in your hands.");
+            });
+            span.append($("<span> - </span>"));
+            span.append(action);
+        }
+
+        if (person === generator && person.location === player_building) {
+            action = $("<a href='javascript:void'>Take the Window Generator</a>");
+            action.click(function () {
+                generator = null;
+                append_to_timeline(timeline_list, "You take the generator from " + person.name + " whilst they are not looking and store it safely on your person. It fits neatly in your briefcase, it's almost like they were made for each other.");
+            });
+            span.append($("<span> - </span>"));
+            span.append(action);
+        }
+
+        return span;
+    }
+
     function name_building(building) {
         if (building.known) {
             return building.name + " (" + FACTIONS[building.affiliation] + ")";
@@ -102,12 +207,17 @@ function main() {
     }
 
     function describe_building(building) {
-        var description = $("<div></div>"), occupants = $("<ul></ul>"), actions = $("<ul></ul>"), action;
+        var description = $("<div></div>"), occupants = $("<ul></ul>"), actions = $("<ul></ul>"), action, p, person, li;
         description.append($("<h2>" + name_building(building) + "</h2>"));
         description.append($("<p>" + building.description + (building === player_building ? " You are here." : "") + "</p>"));
 
-        // TODO: Describe occupants
         description.append($("<h3>Notable Occupants</h3>"));
+        for (p in building.people) {
+            person = building.people[p];
+            li = $("<li></li>");
+            li.append(describe_person(person));
+            occupants.append(li);
+        }
         description.append(occupants);
 
         description.append($("<h3>Actions</h3>"));
@@ -162,7 +272,7 @@ function main() {
                 actions.append(action);
             }
 
-            if (building === handler_building) {
+            if (building === handler_building && building == player_building) {
                 var leave;
                 leave = $("<a href='javascript:void'>Leave this city</a>");
                 leave.click(function () {
@@ -375,7 +485,7 @@ function main() {
             msg_banner.html("Generating world");
         },
         function () {
-            world = generate_heightmap(512);
+            world = generate_heightmap(128);
             msg_banner.html("Generating world map");
         },
         function () {
@@ -433,13 +543,15 @@ function main() {
                 handler_building = Array.choice(world.building_meshes).building;
             } while (handler_building === player_building);
 
-            generator = Array.choice(world.people);
+            do {
+                generator = Array.choice(world.people);
+            } while (generator.affiliation === NEUTRAL);
             do {
                 relay = Array.choice(world.people);
-            } while (relay === generator || relay.affiliation === generator.affiliation);
+            } while (relay === generator || relay.affiliation === generator.affiliation || relay.affiliation === NEUTRAL);
             do {
                 sphere = Array.choice(world.people);
-            } while (sphere === generator || sphere === relay || sphere.affiliation === generator.affiliation || sphere.affiliation === relay.affiliation);
+            } while (sphere === generator || sphere === relay || sphere.affiliation === generator.affiliation || sphere.affiliation === relay.affiliation || sphere.affiliation === NEUTRAL);
 
             selected_building = player_building;
             camera_location = map_xy_to_world_xy(player_building.location, 100/world.size);

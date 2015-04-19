@@ -226,7 +226,7 @@ function choose_building_name() {
 }
 
 function generate_buildings(world) {
-    var buildings = [], building, location, x, y,
+    var buildings = [], building, location,
         candidate, neighbours, neighbour, clear,
         n, m, type;
 
@@ -403,7 +403,9 @@ function generate_people(building, world) {
             affiliation: Array.choice(affiliation),
             inventory: [],
             location: building,
-            known: false
+            known: false,
+            talked: false,
+            disposition: Math.random()
         };
         people.push(person);
         world.people.push(person);
