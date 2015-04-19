@@ -74,13 +74,50 @@ function main() {
     }
 
     function tick() {
-        var now  = +new Date, dt = now - last_frame, time_of_day, new_camera_vector;
+        var now  = +new Date, dt = now - last_frame, time_of_day, new_camera_vector,
+            intersection, intersections, building, mouse_delta, movement_speed, dx, dy, rx, ry;
         if (!paused) {
             time += dt * game_speed;
         }
         time_of_day = (time - (length_of_day * 0.55)) % length_of_day;
 
+        if (mouse_last_at !== undefined) {
+            mouse_delta = {x: mouse_last_at.x - mouse_at.x, y: mouse_last_at.y - mouse_at.y};
+        }
+
         requestAnimationFrame(tick);
+
+        msg_banner.hide();
+        if (mouse_at !== undefined) {
+            renderer.projector.setFromCamera({
+                x: (mouse_at.x / innerWidth) * 2 - 1,
+                y: -(mouse_at.y / innerHeight) * 2 + 1
+            }, renderer.camera);
+            intersections = renderer.projector.intersectObjects(world.building_meshes);
+            if (intersections.length > 0) {
+                intersection = intersections[0];
+                building = intersection.object.building;
+            }
+            if (building !== undefined) {
+                msg_banner.text(building.name + " (" + FACTIONS[building.affiliation] + ")");
+                msg_banner.show();
+            }
+        }
+
+        if (mouse_delta !== undefined && left_mouse_down) {
+            movement_speed = camera_zoom / 200;
+            dx = mouse_delta.x * movement_speed;
+            dy = mouse_delta.y * movement_speed;
+            rx = (dx*Math.cos(camera_rotation)) - (dy*Math.sin(camera_rotation));
+            ry = (dx*Math.sin(camera_rotation)) + (dy*Math.cos(camera_rotation));
+
+            camera_location.x = Math.min(Math.max(-50, camera_location.x + rx), 50);
+            camera_location.y = Math.min(Math.max(-50, camera_location.y + ry), 50);
+        }
+
+        if (mouse_delta !== undefined && right_mouse_down) {
+            camera_rotation += mouse_delta.x / 200;
+        }
 
         light.position.set(
                 Math.sin(Math.PI*2*(time_of_day/length_of_day)) * 50,
@@ -88,11 +125,9 @@ function main() {
                 0
         );
 
-        camera_rotation = time / 1000;
-
         new_camera_vector = new THREE.Vector3(-Math.sin(camera_rotation)* -1.2 *camera_zoom, camera_zoom, Math.cos(camera_rotation)*-1.2*camera_zoom);
         new_camera_vector.x += camera_location.x;
-        new_camera_vector.y += camera_location.y;
+        new_camera_vector.z += camera_location.y;
         renderer.camera.position.set(new_camera_vector.x, new_camera_vector.y, new_camera_vector.z);
         renderer.camera.lookAt(new THREE.Vector3(camera_location.x, (-15/50)*camera_zoom, camera_location.y));
 
@@ -100,24 +135,11 @@ function main() {
         renderer.renderer.render(renderer.scene, renderer.camera);
         status_banner.text(current_time());
         last_frame = now;
+        mouse_last_at = mouse_at;
     }
 
     function mouse_move_handler(evt) {
-        msg_banner.hide();
-        var x = (evt.pageX / innerWidth) * 2 - 1,
-            y = -(evt.pageY / innerHeight) * 2 + 1,
-            intersection, intersections, building;
-        renderer.projector.setFromCamera({x: x, y: y}, renderer.camera);
-        intersections = renderer.projector.intersectObjects(world.building_meshes);
-        if (intersections.length > 0) {
-            intersection = intersections[0];
-            building = intersection.object.building;
-        }
-        if (building !== undefined) {
-            msg_banner.text(building.name + " (" + FACTIONS[building.affiliation] + ")");
-            msg_banner.show();
-            console.log(building.name, building.affiliation);
-        }
+        mouse_at = {x: evt.pageX, y: evt.pageY};
     }
 
     function mouse_down(evt) {
@@ -145,6 +167,13 @@ function main() {
         } else {
             return;
         }
+        return false;
+    }
+
+    function mouse_scroll(evt) {
+        var scroll = evt.originalEvent.wheelDelta || evt.originalEvent.detail;
+        camera_zoom -= scroll / 60;
+        camera_zoom = Math.min(50, Math.max(5, camera_zoom));
         return false;
     }
 
@@ -206,6 +235,7 @@ function main() {
             body.mousemove(mouse_move_handler);
             body.mousedown(mouse_down);
             body.mouseup(mouse_up);
+            $(window).bind("mousewheel DOMMouseScroll", mouse_scroll);
             tick();
         },
         function () {
