@@ -23,6 +23,8 @@
             border-bottom: 2px solid #9370db;
             border-right: 32px solid #9370db;
             margin: auto;
+            left: 0;
+            right: 0;
         }
         #status-banner {
             width: 50%;
@@ -32,6 +34,8 @@
             border-right: 32px solid #9370db;
             margin: auto;
             display: none;
+            left: 0;
+            right: 0;
         }
         #left-dialogue {
             border-left: 32px solid #9370db;
@@ -39,22 +43,43 @@
             top: 80px;
             left: 40px;
             width: 20%;
-            min-height: 500px;
+            min-height: 200px;
+            max-height: 500px;
             display: none;
             text-align: left;
             font-size: 0.8em;
         }
-        #left-dialogue h1 {
+        #right-dialogue {
+            border-right: 32px solid #9370db;
+            border-top: 2px solid #9370db;
+            top: 80px;
+            right: 40px;
+            width: 20%;
+            min-height: 200px;
+            max-height: 500px;
+            text-align: left;
+            font-size: 0.8em;
+            display: none;
+            padding: 0.5em;
+        }
+        h2 {
             text-align: center;
         }
         .banner {
             background: rgba(147, 112, 219, 0.50);
             position: fixed;
-            left: 0;
-            right: 0;
             z-index: 1000;
             text-align: center;
             padding: 0.2em;
+            overflow-y: auto;
+        }
+        a:link {
+            color: #bf9ef7;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -62,12 +87,20 @@
 <div id="msg-banner" class="banner">Loading scripts</div>
 <div id="status-banner" class="banner"></div>
 <div id="left-dialogue" class="banner"></div>
+<div id="right-dialogue" class="banner">
+    <h2>Mission Timeline</h2>
+    <ul></ul>
+</div>
 
 <script src="js-ext/perlin.js"></script>
 <script src="js-ext/three.min.js"></script>
 <script src="js-ext/jquery-1.10.2.min.js"></script>
+<script src="js-ext/buzz.min.js"></script>
+
+<script src="fonts/helvetiker_regular.typeface.js"></script>
 
 <script src="js/util.js"></script>
+<script src="js/dialogue.js"></script>
 <script src="js/world.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/game.js"></script>

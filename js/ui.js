@@ -41,6 +41,16 @@ function create_render_surface(textures) {
     return mesh;
 }
 
+function create_marker(text, colour) {
+    return new THREE.Mesh(
+        new THREE.TextGeometry(text, {
+            size: 1,
+            height: 0.1
+        }),
+        new THREE.MeshBasicMaterial({color: colour})
+    );
+}
+
 function add_buildings_to_map(world, buildings, renderer) {
     var b, building, mesh, tex, neutral_tex, government_tex, corp_tex, cult_tex,
         size = 100 / world.size, gcoord;
@@ -68,4 +78,11 @@ function add_buildings_to_map(world, buildings, renderer) {
         renderer.scene.add(mesh);
         world.building_meshes.push(mesh);
     }
+}
+
+var msg_ping = new buzz.sound("sound/msg-alert", {formats: ["wav"]});
+
+function append_to_timeline(timeline, content) {
+    msg_ping.play();
+    timeline.prepend($("<li>" + content + "</li>"));
 }

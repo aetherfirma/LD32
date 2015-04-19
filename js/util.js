@@ -39,3 +39,23 @@ function square_dist(a, b) {
 function map_xy_to_world_xy(coord, size) {
     return {x: (coord.x * size) - 50, y: (coord.y * size) - 50};
 }
+function describe_time(time, length_of_day) {
+    var hour, minute, t;
+    hour = length_of_day/24;
+    minute = hour/60;
+    if (time < hour) {
+        t = Math.ceil(time / minute);
+        if (t == 1) {
+            return "1 minute";
+        } else {
+            return t + " minutes";
+        }
+    } else {
+        t = Math.round(time / hour);
+        if (t == 1) {
+            return "about an hour";
+        } else {
+            return t + " hours";
+        }
+    }
+}

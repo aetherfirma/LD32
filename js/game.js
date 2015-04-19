@@ -1,14 +1,20 @@
 function main() {
     var renderer, world, textures = {}, surface, light, buildings,
-        msg_banner = $("#msg-banner"), status_banner = $("#status-banner"), dialogue = $("#left-dialogue"),
-        time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.5,
+        msg_banner = $("#msg-banner"), status_banner = $("#status-banner"),
+        dialogue = $("#left-dialogue"), timeline = $("#right-dialogue"), timeline_list = timeline.find("ul"),
+        time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.1,
         start_year = 2143, start_date = 56, m, next_year, calendar_day,
         camera_location = {x: 0, y: 0}, camera_rotation = Math.PI/2, camera_zoom = 50,
         left_mouse_down = false, right_mouse_down = false, mouse_down_at,
         mouse_at, mouse_last_at,
-        player_building, selected_building, desired_position;
+        player_building, destination_building,
+        selected_building, desired_position,
+        player_building_marker,
+        schedule = [],
+        described_building, travelling = false, handler_busy = false,
+        building_select = new buzz.sound("sound/building-select", {formats: ["wav"]});;
 
-    function current_time() {
+    function write_date(current_time) {
         var day, month, year, time_of_day, hour, minutes,
             days_of_the_week = [
                 "Sunday",
@@ -46,7 +52,7 @@ function main() {
                 31
             ];
 
-        calendar_day = Math.floor(time / length_of_day);
+        calendar_day = Math.floor(current_time / length_of_day);
         day = calendar_day + start_date;
         calendar_day = days_of_the_week[calendar_day % 7];
         year = start_year;
@@ -67,7 +73,7 @@ function main() {
         } while (next_year);
         month = months_of_the_year[m];
 
-        time_of_day = ((time % length_of_day) / length_of_day) * 24 * 60;
+        time_of_day = ((current_time % length_of_day) / length_of_day) * 24 * 60;
         hour = Math.floor(time_of_day / 60);
         minutes = Math.floor(time_of_day % 60);
 
@@ -86,14 +92,100 @@ function main() {
         }
     }
 
+    function name_building(building) {
+        if (building.known) {
+            return building.name + " (" + FACTIONS[building.affiliation] + ")";
+        } else {
+            return building.name;
+        }
+    }
+
+    function describe_building(building) {
+        var description = $("<div></div>"), occupants = $("<ul></ul>"), actions = $("<ul></ul>"), action;
+        description.append($("<h2>" + name_building(building) + "</h2>"));
+        description.append($("<p>" + building.description + (building === player_building ? " You are here." : "") + "</p>"));
+
+        // TODO: Describe occupants
+        description.append($("<h3>Notable Occupants</h3>"));
+        description.append(occupants);
+
+        description.append($("<h3>Actions</h3>"));
+        if (travelling) {
+            description.append($("<p>You cannot work whilst travelling.</p>"))
+        } else {
+            if (building !== player_building) {
+                var distance, go_here;
+                distance = Math.sqrt(square_dist(player_building.location, building.location)) * (length_of_day / 24 / 6);
+                go_here = $("<a href='javascript:void'>Go here (approx. " + describe_time(distance, length_of_day) + " away)</a>");
+                go_here.click(function () {
+                    travelling = true;
+                    game_speed = 5;
+                    selected_building = undefined;
+                    append_to_timeline(timeline_list, "You leave " + player_building.name + " heading towards " + building.name + ". You think you will arrive about " + write_date(time + distance) + ".");
+                    schedule.push({"due": time + distance, "do": function () {
+                        travelling = false;
+                        game_speed = 0.1;
+                        player_building = building;
+                        selected_building = building;
+                        append_to_timeline(timeline_list, "You arrive at " + building.name);
+                    }})
+                });
+                action = $("<li></li>");
+                action.append(go_here);
+                actions.append(action);
+            }
+
+            if (!building.known) {
+                var ask_handler, cost;
+                ask_handler = $("<a href='javascript:void'>Ask your handler about " + building.name + "</a>");
+                if (handler_busy) {
+                    ask_handler.click(function () {
+                        append_to_timeline(timeline_list, "Your handler tells you to stop calling. They're still busy with your last request.")
+                    })
+                } else {
+                    cost = length_of_day / 24 / 3 * Math.randint(1, 10);
+                    ask_handler.click(function () {
+                        append_to_timeline(timeline_list, "Your handler writes down the building name and says they'll get back to you in about " + describe_time(cost, length_of_day) + ".");
+                        described_building = undefined;
+                        handler_busy = true;
+                        schedule.push({"due": time + cost, "do": function () {
+                            handler_busy = false;
+                            building.known = true;
+                            described_building = undefined;
+                            append_to_timeline(timeline_list, "You get a call from your handler. It turns out that " + building.name + " belongs to the " + FACTIONS[building.affiliation] + ".");
+                        }})
+                    })
+                }
+                action = $("<li></li>");
+                action.append(ask_handler);
+                actions.append(action);
+            }
+
+            description.append(actions);
+        }
+
+        return description;
+    }
+
     function tick() {
         var now  = +new Date, dt = now - last_frame, time_of_day, new_camera_vector,
-            building, mouse_delta, movement_speed, dx, dy, rx, ry, dialogue_html,
-            p, person;
+            building, mouse_delta, movement_speed, dx, dy, rx, ry,  player_loc,
+            temp_schedule, i, item;
         if (!paused) {
             time += dt * game_speed;
         }
         time_of_day = (time - (length_of_day * 0.55)) % length_of_day;
+
+        temp_schedule = schedule;
+        schedule = [];
+        for (i in temp_schedule) {
+            item = temp_schedule[i];
+            if (item.due < time) {
+                item.do();
+            } else {
+                schedule.push(item);
+            }
+        }
 
         if (mouse_last_at !== undefined) {
             mouse_delta = {x: mouse_last_at.x - mouse_at.x, y: mouse_last_at.y - mouse_at.y};
@@ -105,23 +197,25 @@ function main() {
         if (mouse_at !== undefined) {
             building = pick_building(mouse_at);
             if (building !== undefined) {
-                msg_banner.text(building.name + " (" + FACTIONS[building.affiliation] + ")");
+                msg_banner.text(name_building(building));
                 msg_banner.show();
             }
         }
 
+        player_loc = map_xy_to_world_xy(player_building.location, 100/world.size);
+        player_building_marker.position.set(player_loc.x, player_building.height * (100/world.size), player_loc.y);
+        player_building_marker.rotation.y = time / 100;
+
         if (selected_building !== undefined) {
-            dialogue_html = "<h2>" + selected_building.name + " (" + FACTIONS[selected_building.affiliation] + ")</h2>";
-            dialogue_html += "<p>" + selected_building.description + "</p>";
-            dialogue_html += "<ul>";
-            for (p in selected_building.people) {
-                person = selected_building.people[p];
-                dialogue_html += "<li>" + person.name + " (" + FACTIONS[person.affiliation] + ")</li>";
+            if (described_building !== selected_building) {
+                dialogue.empty();
+                dialogue.append(describe_building(selected_building));
+                dialogue.show();
+                described_building = selected_building;
             }
-            dialogue_html += "</ul>";
-            dialogue.html(dialogue_html);
-            dialogue.show();
         } else {
+            described_building = undefined;
+            dialogue.empty();
             dialogue.hide();
         }
 
@@ -180,7 +274,7 @@ function main() {
 
 
         renderer.renderer.render(renderer.scene, renderer.camera);
-        status_banner.text(current_time());
+        status_banner.text(write_date(time) + (travelling ? " - Travelling" : ""));
         last_frame = now;
         mouse_last_at = mouse_at;
     }
@@ -229,8 +323,10 @@ function main() {
         if (building !== undefined) {
             selected_building = building;
             camera_location = map_xy_to_world_xy(building.location, 100/world.size);
+            building_select.play();
         } else {
             selected_building = undefined;
+            building_select.play();
         }
     }
 
@@ -281,15 +377,41 @@ function main() {
             msg_banner.hide();
         },
         function () {
+            var game_window = $(renderer.renderer.domElement), opening_dialogue;
+
             document.body.appendChild(renderer.renderer.domElement);
-            renderer.renderer.domElement.oncontextmenu = function(){return false};
             status_banner.show();
+            timeline.show();
+
             last_frame = +new Date;
-            var game_window = $(renderer.renderer.domElement);
+            player_building_marker = create_marker("^", 0xffffff);
+            renderer.scene.add(player_building_marker);
+
             game_window.mousemove(mouse_move_handler);
             game_window.mousedown(mouse_down);
             game_window.mouseup(mouse_up);
-            $(window).bind("mousewheel DOMMouseScroll", mouse_scroll);
+            game_window.bind("mousewheel DOMMouseScroll", mouse_scroll);
+            renderer.renderer.domElement.oncontextmenu = function(){return false};
+
+            player_building = Array.choice(world.building_meshes).building;
+            do {
+                destination_building = Array.choice(world.building_meshes).building;
+            } while (destination_building === player_building);
+            selected_building = player_building;
+            camera_location = map_xy_to_world_xy(player_building.location, 100/world.size);
+            camera_zoom = 5;
+
+            opening_dialogue  = "Last night you stole the XN47 experimental weapons platform from the Omnicorp HQ just outside the city of New Durum. ";
+            opening_dialogue += "You fled via hovercraft and managed to make it into the city proper where you ducked into the lobby of " + player_building.name;
+            opening_dialogue += " where you have been hiding all night. You prepare to head on towards " + destination_building.name + " where your handler is ";
+            opening_dialogue += "waiting for you when you notice your one of your bags have been stolen! You still have the body of the weapon, but the ";
+            opening_dialogue += "<em>Window Generator</em>, the <em>Affirmation Relay</em> and most importantly the <em>Correction Sphere</em> are missing! ";
+            opening_dialogue += "You search the CCTV and see that the <em>National Crime Agency</em>, agents from <em>Omnicorp</em> and the doomsday cult ";
+            opening_dialogue += "<em>Ender</em> broke in and stole part of it each! They will have hidden their peices somewhere around the city and will ";
+            opening_dialogue += "have discovered their pieces are not complete. Find the pieces before they do, and escape before they find you.";
+            append_to_timeline(timeline_list, opening_dialogue);
+            append_to_timeline(timeline_list, "Click on a building to take a look inside, or scroll down to read the background.");
+
             tick();
         },
         function () {

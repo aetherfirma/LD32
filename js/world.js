@@ -190,7 +190,7 @@ NEUTRAL = 0;
 GOVERNMENT = 1;
 CORPORATION = 2;
 CULT = 3;
-FACTIONS = ["Neutral", "Government", "Corporation", "Cult"];
+FACTIONS = ["Unaffiliated", "National Crime Agency", "Omnicorp", "Ender"];
 
 BUILDING_PREFIXES = [
     "The ", "New ", "Uptown ", "Digital ", "Analogue ", "Downtown ",
@@ -238,8 +238,8 @@ function generate_buildings(world) {
             affiliation: Array.choice([NEUTRAL, NEUTRAL, NEUTRAL, GOVERNMENT, CORPORATION, CULT]),
             height: Math.randint(2, 10),
             name: choose_building_name(),
-            description: "A building",
-            inventory: []
+            description: "A building.",
+            known: false
         };
         location = undefined;
         do {
@@ -402,7 +402,8 @@ function generate_people(building, world) {
             name: choose_person_name(),
             affiliation: Array.choice(affiliation),
             inventory: [],
-            location: building
+            location: building,
+            known: false
         };
         people.push(person);
         world.people.push(person);
