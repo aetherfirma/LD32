@@ -42,6 +42,8 @@ function add_buildings_to_map(world, buildings, renderer) {
     var b, building, mesh, tex, neutral_tex, government_tex, corp_tex, cult_tex,
         size = 100 / world.size, gx, gz;
 
+    world.building_meshes = [];
+
     for (b in buildings) {
         building = buildings[b];
         if (building.affiliation == NEUTRAL) {
@@ -62,5 +64,6 @@ function add_buildings_to_map(world, buildings, renderer) {
         gz = 50 - (building.location.y * size);
         mesh.position.set(gx, gz, size * building.height / 2);
         renderer.scene.add(mesh);
+        world.building_meshes.push(mesh);
     }
 }

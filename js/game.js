@@ -2,7 +2,8 @@ function main() {
     var renderer, world, textures = {}, surface, light, buildings,
         msg_banner = $("#msg-banner"), status_banner = $("#status-banner"),
         time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.25,
-        start_year = 2143, start_date = 56, m, next_year, calendar_day;
+        start_year = 2143, start_date = 56, m, next_year, calendar_day,
+        camera_location = {x: 0, y: 0}, camera_rotation = Math.PI/2, camera_zoom = 50;
 
     function current_time() {
         var day, month, year, time_of_day, hour, minutes,
@@ -71,21 +72,50 @@ function main() {
     }
 
     function tick() {
-        var now  = +new Date, dt = now - last_frame, time_of_day;
+        var now  = +new Date, dt = now - last_frame, time_of_day, new_camera_vector;
         if (!paused) {
             time += dt * game_speed;
         }
         time_of_day = (time - (length_of_day * 0.55)) % length_of_day;
 
         requestAnimationFrame(tick);
+
         light.position.set(
                 Math.sin(Math.PI*2*(time_of_day/length_of_day)) * 50,
                 0,
                 Math.cos(Math.PI*2*(time_of_day/length_of_day)) * 50
         );
+
+        camera_rotation = time / 1000;
+
+        new_camera_vector = new THREE.Vector3(-Math.sin(camera_rotation)* -1.2 *camera_zoom, Math.cos(camera_rotation)*-1.2*camera_zoom, camera_zoom);
+        new_camera_vector.x += camera_location.x;
+        new_camera_vector.y += camera_location.y;
+        renderer.camera.position.set(new_camera_vector.x, new_camera_vector.y, new_camera_vector.z);
+        renderer.camera.lookAt(new THREE.Vector3(0, 0, (-15/50)*camera_zoom));
+
+
         renderer.renderer.render(renderer.scene, renderer.camera);
         status_banner.text(current_time());
         last_frame = now;
+    }
+
+    function mouse_move_handler(evt) {
+        msg_banner.hide();
+        var x = (evt.pageX / innerWidth) * 2 - 1,
+            y = -(evt.pageY / innerHeight) * 2 + 1,
+            intersection, intersections, building;
+        renderer.projector.setFromCamera({x: x, y: y}, renderer.camera);
+        intersections = renderer.projector.intersectObjects(world.building_meshes);
+        if (intersections.length > 0) {
+            intersection = intersections[0];
+            building = intersection.object.building;
+        }
+        if (building !== undefined) {
+            msg_banner.text(building.name + " (" + FACTIONS[building.affiliation] + ")");
+            msg_banner.show();
+            console.log(building.name, building.affiliation);
+        }
     }
 
     var init_pipeline = [
@@ -99,11 +129,12 @@ function main() {
             light = new THREE.DirectionalLight(0xffffff, 1);
             light.position.set(5000,5000,5000);
             renderer.scene.add(light);
-            renderer.scene.add(new THREE.AmbientLight(0x333333));
+            renderer.scene.add(new THREE.AmbientLight(0xffffff));
+            //renderer.scene.add(new THREE.AmbientLight(0x333333));
             msg_banner.html("Generating world");
         },
         function () {
-            world = generate_heightmap(1024);
+            world = generate_heightmap(256);
             msg_banner.html("Generating world map");
         },
         function () {
@@ -135,28 +166,7 @@ function main() {
             document.body.appendChild(renderer.renderer.domElement);
             status_banner.show();
             last_frame = +new Date;
-            $("body").mousemove(function (evt) {
-                msg_banner.hide();
-                var x = (evt.pageX / innerWidth) * 2 - 1,
-                    y = -(evt.pageY / innerHeight) * 2 + 1,
-                    intersection, size = 100 / world.size, b, building;
-                renderer.projector.setFromCamera({x: x, y: y}, renderer.camera);
-                intersection = renderer.projector.intersectObject(surface);
-                if (intersection.length === 1) {
-                    intersection = intersection[0].point;
-                } else {
-                    return;
-                }
-                x = Math.round((50 + intersection.x) / size);
-                y = Math.round((50 - intersection.y) / size);
-                b = world.buildings[y * world.size + x];
-                if (b !== 0) {
-                    building = buildings[b - 1];
-                    msg_banner.text(building.name + " (" + FACTIONS[building.affiliation] + ")");
-                    msg_banner.show();
-                    console.log(building.name, building.affiliation);
-                }
-            });
+            $("body").mousemove(mouse_move_handler);
             tick();
         },
         function () {
