@@ -233,7 +233,7 @@ function generate_buildings(world) {
 
     world.buildings = new Uint8ClampedArray(world.size * world.size);
 
-    for (n = 0; n < (world.size * world.size / 327); n++) {
+    for (n = 0; n < (world.size * world.size / 200); n++) {
         building = {
             affiliation: Array.choice([NEUTRAL, NEUTRAL, NEUTRAL, GOVERNMENT, CORPORATION, CULT]),
             height: Math.randint(2, 10),
@@ -245,7 +245,9 @@ function generate_buildings(world) {
                 x: Math.randint(0, world.size - 1),
                 y: Math.randint(0, world.size - 1)
             };
+
             type = world.get_type(candidate);
+            if (world.buildings[candidate.y * world.size + candidate.x] != 0) continue;
             if (!(type === LAND)) continue;
             neighbours = get_neighbours(world, candidate);
             if (neighbours.length !== 8) continue;

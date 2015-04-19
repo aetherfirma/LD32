@@ -111,12 +111,12 @@ function main() {
             rx = (dx*Math.cos(camera_rotation)) - (dy*Math.sin(camera_rotation));
             ry = (dx*Math.sin(camera_rotation)) + (dy*Math.cos(camera_rotation));
 
-            camera_location.x = Math.min(Math.max(-50, camera_location.x + rx), 50);
-            camera_location.y = Math.min(Math.max(-50, camera_location.y + ry), 50);
+            camera_location.x = Math.min(Math.max(-50, camera_location.x - rx), 50);
+            camera_location.y = Math.min(Math.max(-50, camera_location.y - ry), 50);
         }
 
         if (mouse_delta !== undefined && right_mouse_down) {
-            camera_rotation += mouse_delta.x / 200;
+            camera_rotation -= mouse_delta.x / 200;
         }
 
         light.position.set(
@@ -199,7 +199,7 @@ function main() {
             msg_banner.html("Generating world");
         },
         function () {
-            world = generate_heightmap(256);
+            world = generate_heightmap(512);
             msg_banner.html("Generating world map");
         },
         function () {
