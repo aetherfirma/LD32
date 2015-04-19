@@ -19,13 +19,14 @@ function setup_renderer() {
 function create_render_surface(textures) {
     var t_texture = new THREE.Texture(textures.diff),
         t_bump = new THREE.Texture(textures.bump),
-        t_specular = new THREE.Texture(textures.spec);
+        t_specular = new THREE.Texture(textures.spec),
+        mesh;
     t_texture.needsUpdate = true;
     t_texture.magFilter = THREE.NearestFilter;
     t_bump.needsUpdate = true;
     t_specular.needsUpdate = true;
     t_specular.magFilter = THREE.NearestFilter;
-    return new THREE.Mesh(
+    mesh = new THREE.Mesh(
         new THREE.PlaneBufferGeometry(100,100),
         new THREE.MeshPhongMaterial({
             map: t_texture,
@@ -36,6 +37,8 @@ function create_render_surface(textures) {
             transparent: true
         })
     );
+    mesh.rotation.x = -Math.PI/2;
+    return mesh;
 }
 
 function add_buildings_to_map(world, buildings, renderer) {
@@ -56,13 +59,13 @@ function add_buildings_to_map(world, buildings, renderer) {
             tex = new THREE.MeshPhongMaterial({color: 0xff0000});
         }
         mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(size, size, size * building.height),
+            new THREE.BoxGeometry(size, size * building.height, size),
             tex
         );
         mesh.building = building;
         gx = (building.location.x * size) - 50;
-        gz = 50 - (building.location.y * size);
-        mesh.position.set(gx, gz, size * building.height / 2);
+        gz = (building.location.y * size) - 50;
+        mesh.position.set(gx, size * building.height / 2, gz);
         renderer.scene.add(mesh);
         world.building_meshes.push(mesh);
     }

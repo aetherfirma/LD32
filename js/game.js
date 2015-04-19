@@ -1,7 +1,7 @@
 function main() {
     var renderer, world, textures = {}, surface, light, buildings,
         msg_banner = $("#msg-banner"), status_banner = $("#status-banner"),
-        time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.25,
+        time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.5,
         start_year = 2143, start_date = 56, m, next_year, calendar_day,
         camera_location = {x: 0, y: 0}, camera_rotation = Math.PI/2, camera_zoom = 50;
 
@@ -82,17 +82,17 @@ function main() {
 
         light.position.set(
                 Math.sin(Math.PI*2*(time_of_day/length_of_day)) * 50,
-                0,
-                Math.cos(Math.PI*2*(time_of_day/length_of_day)) * 50
+                Math.cos(Math.PI*2*(time_of_day/length_of_day)) * 50,
+                0
         );
 
         camera_rotation = time / 1000;
 
-        new_camera_vector = new THREE.Vector3(-Math.sin(camera_rotation)* -1.2 *camera_zoom, Math.cos(camera_rotation)*-1.2*camera_zoom, camera_zoom);
+        new_camera_vector = new THREE.Vector3(-Math.sin(camera_rotation)* -1.2 *camera_zoom, camera_zoom, Math.cos(camera_rotation)*-1.2*camera_zoom);
         new_camera_vector.x += camera_location.x;
         new_camera_vector.y += camera_location.y;
         renderer.camera.position.set(new_camera_vector.x, new_camera_vector.y, new_camera_vector.z);
-        renderer.camera.lookAt(new THREE.Vector3(0, 0, (-15/50)*camera_zoom));
+        renderer.camera.lookAt(new THREE.Vector3(camera_location.x, (-15/50)*camera_zoom, camera_location.y));
 
 
         renderer.renderer.render(renderer.scene, renderer.camera);
@@ -124,13 +124,11 @@ function main() {
         },
         function () {
             renderer = setup_renderer();
-            renderer.camera.position.set(0, -60, 50);
-            renderer.camera.lookAt(new THREE.Vector3(0,0,-15));
             light = new THREE.DirectionalLight(0xffffff, 1);
             light.position.set(5000,5000,5000);
             renderer.scene.add(light);
-            renderer.scene.add(new THREE.AmbientLight(0xffffff));
-            //renderer.scene.add(new THREE.AmbientLight(0x333333));
+            //renderer.scene.add(new THREE.AmbientLight(0xffffff));
+            renderer.scene.add(new THREE.AmbientLight(0x333333));
             msg_banner.html("Generating world");
         },
         function () {
