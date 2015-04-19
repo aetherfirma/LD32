@@ -36,3 +36,6 @@ function pad(n, width, z) {
 function square_dist(a, b) {
     return ((b.x - a.x) * (b.x - a.x)) + ((b.y - a.y) * (b.y - a.y));
 }
+function map_xy_to_world_xy(coord, size) {
+    return {x: (coord.x * size) - 50, y: (coord.y * size) - 50};
+}

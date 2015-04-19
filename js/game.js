@@ -1,11 +1,12 @@
 function main() {
     var renderer, world, textures = {}, surface, light, buildings,
-        msg_banner = $("#msg-banner"), status_banner = $("#status-banner"),
+        msg_banner = $("#msg-banner"), status_banner = $("#status-banner"), dialogue = $("#left-dialogue"),
         time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.5,
         start_year = 2143, start_date = 56, m, next_year, calendar_day,
         camera_location = {x: 0, y: 0}, camera_rotation = Math.PI/2, camera_zoom = 50,
         left_mouse_down = false, right_mouse_down = false, mouse_down_at,
-        mouse_at, mouse_last_at;
+        mouse_at, mouse_last_at,
+        player_building, selected_building, desired_position;
 
     function current_time() {
         var day, month, year, time_of_day, hour, minutes,
@@ -73,9 +74,22 @@ function main() {
         return pad(hour, 2) + ":" + pad(minutes, 2) + " " + calendar_day + " " + day + " " + month + " " + year;
     }
 
+    function pick_building(coord) {
+        var intersections;
+        renderer.projector.setFromCamera({
+            x: (coord.x / innerWidth) * 2 - 1,
+            y: -(coord.y / innerHeight) * 2 + 1
+        }, renderer.camera);
+        intersections = renderer.projector.intersectObjects(world.building_meshes);
+        if (intersections.length > 0) {
+            return intersections[0].object.building;
+        }
+    }
+
     function tick() {
         var now  = +new Date, dt = now - last_frame, time_of_day, new_camera_vector,
-            intersection, intersections, building, mouse_delta, movement_speed, dx, dy, rx, ry;
+            building, mouse_delta, movement_speed, dx, dy, rx, ry, dialogue_html,
+            p, person;
         if (!paused) {
             time += dt * game_speed;
         }
@@ -89,34 +103,67 @@ function main() {
 
         msg_banner.hide();
         if (mouse_at !== undefined) {
-            renderer.projector.setFromCamera({
-                x: (mouse_at.x / innerWidth) * 2 - 1,
-                y: -(mouse_at.y / innerHeight) * 2 + 1
-            }, renderer.camera);
-            intersections = renderer.projector.intersectObjects(world.building_meshes);
-            if (intersections.length > 0) {
-                intersection = intersections[0];
-                building = intersection.object.building;
-            }
+            building = pick_building(mouse_at);
             if (building !== undefined) {
                 msg_banner.text(building.name + " (" + FACTIONS[building.affiliation] + ")");
                 msg_banner.show();
             }
         }
 
-        if (mouse_delta !== undefined && left_mouse_down) {
-            movement_speed = camera_zoom / 200;
-            dx = mouse_delta.x * movement_speed;
-            dy = mouse_delta.y * movement_speed;
+        if (selected_building !== undefined) {
+            dialogue_html = "<h2>" + selected_building.name + " (" + FACTIONS[selected_building.affiliation] + ")</h2>";
+            dialogue_html += "<p>" + selected_building.description + "</p>";
+            dialogue_html += "<ul>";
+            for (p in selected_building.people) {
+                person = selected_building.people[p];
+                dialogue_html += "<li>" + person.name + " (" + FACTIONS[person.affiliation] + ")</li>";
+            }
+            dialogue_html += "</ul>";
+            dialogue.html(dialogue_html);
+            dialogue.show();
+        } else {
+            dialogue.hide();
+        }
+
+
+        if (desired_position === undefined && mouse_delta !== undefined && left_mouse_down) {
+            movement_speed = camera_zoom / 3;
+            dx = mouse_delta.x * movement_speed * (dt / 1000);
+            dy = mouse_delta.y * movement_speed * (dt / 1000);
             rx = (dx*Math.cos(camera_rotation)) - (dy*Math.sin(camera_rotation));
             ry = (dx*Math.sin(camera_rotation)) + (dy*Math.cos(camera_rotation));
 
             camera_location.x = Math.min(Math.max(-50, camera_location.x - rx), 50);
             camera_location.y = Math.min(Math.max(-50, camera_location.y - ry), 50);
         }
+        if (desired_position !== undefined) {
+            movement_speed = camera_zoom;
+            dx = desired_position.x - camera_location.x;
+            dy = desired_position.y - camera_location.y;
+            console.log(dx, dy);
+            if (dx !== 0) {
+                rx = (dx / Math.abs(dx)) * movement_speed * (dt / 1000);
+                if (dx < rx) {
+                    camera_location.x = desired_position.x;
+                } else {
+                    camera_location.x += rx;
+                }
+            }
+            if (dy !== 0) {
+                ry = (dy / Math.abs(dy)) * movement_speed * (dt / 1000);
+                if (dy < ry) {
+                    camera_location.y = desired_position.y;
+                } else {
+                    camera_location.y += ry;
+                }
+            }
+            if (camera_location.x === desired_position.x && camera_location.y === desired_position.y) {
+                desired_position = undefined;
+            }
+        }
 
         if (mouse_delta !== undefined && right_mouse_down) {
-            camera_rotation -= mouse_delta.x / 200;
+            camera_rotation -= mouse_delta.x / 3 * (dt / 1000);
         }
 
         light.position.set(
@@ -178,7 +225,13 @@ function main() {
     }
 
     function left_click_handler(evt) {
-        console.log("left");
+        var building = pick_building({x: evt.pageX, y: evt.pageY});
+        if (building !== undefined) {
+            selected_building = building;
+            camera_location = map_xy_to_world_xy(building.location, 100/world.size);
+        } else {
+            selected_building = undefined;
+        }
     }
 
     function right_click_handler(evt) {
@@ -229,12 +282,13 @@ function main() {
         },
         function () {
             document.body.appendChild(renderer.renderer.domElement);
+            renderer.renderer.domElement.oncontextmenu = function(){return false};
             status_banner.show();
             last_frame = +new Date;
-            var body = $("body");
-            body.mousemove(mouse_move_handler);
-            body.mousedown(mouse_down);
-            body.mouseup(mouse_up);
+            var game_window = $(renderer.renderer.domElement);
+            game_window.mousemove(mouse_move_handler);
+            game_window.mousedown(mouse_down);
+            game_window.mouseup(mouse_up);
             $(window).bind("mousewheel DOMMouseScroll", mouse_scroll);
             tick();
         },

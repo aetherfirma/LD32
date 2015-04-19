@@ -43,7 +43,7 @@ function create_render_surface(textures) {
 
 function add_buildings_to_map(world, buildings, renderer) {
     var b, building, mesh, tex, neutral_tex, government_tex, corp_tex, cult_tex,
-        size = 100 / world.size, gx, gz;
+        size = 100 / world.size, gcoord;
 
     world.building_meshes = [];
 
@@ -63,9 +63,8 @@ function add_buildings_to_map(world, buildings, renderer) {
             tex
         );
         mesh.building = building;
-        gx = (building.location.x * size) - 50;
-        gz = (building.location.y * size) - 50;
-        mesh.position.set(gx, size * building.height / 2, gz);
+        gcoord = map_xy_to_world_xy(building.location, size);
+        mesh.position.set(gcoord.x, size * building.height / 2, gcoord.y);
         renderer.scene.add(mesh);
         world.building_meshes.push(mesh);
     }
