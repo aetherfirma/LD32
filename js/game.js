@@ -391,6 +391,11 @@ function main() {
             game_window.mousedown(mouse_down);
             game_window.mouseup(mouse_up);
             game_window.bind("mousewheel DOMMouseScroll", mouse_scroll);
+            $(window).resize(function () {
+                renderer.camera.aspect = innerWidth/innerHeight;
+                renderer.camera.updateProjectionMatrix();
+                renderer.renderer.setSize(innerWidth, innerHeight);
+            });
             renderer.renderer.domElement.oncontextmenu = function(){return false};
 
             player_building = Array.choice(world.building_meshes).building;
