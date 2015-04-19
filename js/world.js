@@ -74,23 +74,10 @@ function generate_heightmap(size, scale, water_coverage) {
 }
 
 function get_slope(world, coord) {
-    var neighbours = [
-        {x: coord.x + 1, y: coord.y},
-        {x: coord.x + 1, y: coord.y + 1},
-        {x: coord.x + 1, y: coord.y - 1},
-        {x: coord.x, y: coord.y},
-        {x: coord.x, y: coord.y + 1},
-        {x: coord.x, y: coord.y - 1},
-        {x: coord.x - 1, y: coord.y},
-        {x: coord.x - 1, y: coord.y + 1},
-        {x: coord.x - 1, y: coord.y - 1}
-        ],
+    var neighbours = get_neighbours(world, coord),
         neighbour, n, height_delta, slopes = [], angle;
     for (n in neighbours) {
         neighbour = neighbours[n];
-        if (neighbour.x < 0 || neighbour.x >= world.size || neighbour.y < 0 || neighbour.y >= world.size) {
-            continue;
-        }
         height_delta = Math.abs(world.get(neighbour) - world.get(coord));
         angle = Math.atan2(height_delta, 1);
         if (!isNaN(angle)) slopes.push(angle);
@@ -199,15 +186,82 @@ function generate_diff_map(world) {
     return diff_tex.canvas;
 }
 
+NEUTRAL = 0;
+GOVERNMENT = 1;
+CORPORATION = 2;
+CULT = 3;
+FACTIONS = ["Neutral", "Government", "Corporation", "Cult"];
+
+BUILDING_PREFIXES = [
+    "The ", "New ", "Uptown ", "Digital ", "Analogue ", "Downtown ",
+    "Old ", "Free ", "International ", "National ", "General ",
+    "Applied ",
+    ""
+];
+BUILDING_NAMES = [
+    "Franklin", "Excel", "Parliament", "Leman", "Russ", "Kerbal",
+    "Eldar", "Column", "Technic", "Technical", "Science", "Hydro",
+    "Farm", "Lamp", "Cheesegrater", "Gherkin", "Netrunner", "Hobbit",
+    "Giant", "Java", "Haskel", "Swift", "Harlequin", "Angel", "Salamander",
+    "Salem", "Witch", "Wraith", "Broad", "Market", "Forge", "Factory",
+    "Cactus", "Rose", "Tulip", "Cube", "Pyramid", "Train", "Vision",
+    "White", "Red", "Green", "Blue", "Ludum Dare", "Knife", "Photo",
+    "Cab", "Oil", "Solar", "Resin", "Coal", "Tree", "Oak", "Fountain",
+    "Marine", "Boat", "Ship", "Aero", "Auto", "Robot", "Machine", "Glove",
+    "Box", "Pizza", "Pasta", "Candle", "Flame", "Fire", "Cactus", "Fork",
+    "Money", "Note", "Check", "Window", "Door", "Arch", "Archway", "Decon",
+    "Bishop", "Priest", "Church", "Temple", "Sky", "Ground", "Tunnel", "Cave",
+    "Plan", "Blueprint", "Kid", "Teen", "Adult", "Pension", "Sketch", "Helicopter",
+    "Electric", "Atomic", "Research", "Academic"
+];
+BUILDING_SUFFIXES = [
+    " Institute", " Building", " Centre", " Hall", " Tower", " Campus",
+    " Industries", " Incorporated", " Limited", " Park", " Services",
+    " House", " Productions", " Agency", " Esquire", " Club",
+    ""
+];
+
+function choose_name() {
+    return Array.choice(BUILDING_PREFIXES) + Array.choice(BUILDING_NAMES) + Array.choice(BUILDING_SUFFIXES);
+}
+
 function generate_buildings(world) {
-    var buildings = [], cities = [], objects = [],
-        building, object;
+    //debugger;
+    var buildings = [], building, location, x, y,
+        candidate, neighbours, neighbour, clear,
+        n, m, type;
 
-    for (var n = 0; n < 20; n++) {
+    world.buildings = new Uint8ClampedArray(world.size * world.size);
+
+    for (n = 0; n < (world.size * world.size / 327); n++) {
         building = {
-            affiliation: null,
+            affiliation: Array.choice([NEUTRAL, NEUTRAL, NEUTRAL, GOVERNMENT, CORPORATION, CULT]),
             height: Math.randint(2, 10),
-
-        }
+            name: choose_name()
+        };
+        location = undefined;
+        do {
+            candidate = {
+                x: Math.randint(0, world.size - 1),
+                y: Math.randint(0, world.size - 1)
+            };
+            type = world.get_type(candidate);
+            if (!(type === LAND)) continue;
+            neighbours = get_neighbours(world, candidate);
+            if (neighbours.length !== 8) continue;
+            clear = true;
+            for (m in neighbours) {
+                neighbour = neighbours[m];
+                if (world.buildings[neighbour.y * world.size + neighbour.x] != 0 || world.get_type(neighbour) == WATER) {
+                    clear = false;
+                    break;
+                }
+            }
+            if (clear) location = candidate;
+        } while (location === undefined);
+        building.location = location;
+        world.buildings[location.y * world.size + location.x] = buildings.length + 1;
+        buildings.push(building);
     }
+    return buildings;
 }

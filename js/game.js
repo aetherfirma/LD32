@@ -1,7 +1,7 @@
 function main() {
-    var renderer, world, textures = {}, surface, light,
+    var renderer, world, textures = {}, surface, light, buildings,
         msg_banner = $("#msg-banner"), status_banner = $("#status-banner"),
-        time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 1,
+        time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.25,
         start_year = 2143, start_date = 56, m, next_year, calendar_day;
 
     function current_time() {
@@ -67,7 +67,7 @@ function main() {
         hour = Math.floor(time_of_day / 60);
         minutes = Math.floor(time_of_day % 60);
 
-        return hour + ":" + minutes + " " + calendar_day + " " + day + " " + month + " " + year;
+        return pad(hour, 2) + ":" + pad(minutes, 2) + " " + calendar_day + " " + day + " " + month + " " + year;
     }
 
     function tick() {
@@ -121,12 +121,42 @@ function main() {
         function () {
             surface = create_render_surface(textures, world);
             renderer.scene.add(surface);
+            msg_banner.html("Getting city map");
+        },
+        function () {
+            buildings = generate_buildings(world);
+            msg_banner.html("Rendering city");
+        },
+        function () {
+            add_buildings_to_map(world, buildings, renderer);
             msg_banner.hide();
         },
         function () {
             document.body.appendChild(renderer.renderer.domElement);
             status_banner.show();
             last_frame = +new Date;
+            $("body").mousemove(function (evt) {
+                msg_banner.hide();
+                var x = (evt.pageX / innerWidth) * 2 - 1,
+                    y = -(evt.pageY / innerHeight) * 2 + 1,
+                    intersection, size = 100 / world.size, b, building;
+                renderer.projector.setFromCamera({x: x, y: y}, renderer.camera);
+                intersection = renderer.projector.intersectObject(surface);
+                if (intersection.length === 1) {
+                    intersection = intersection[0].point;
+                } else {
+                    return;
+                }
+                x = Math.round((50 + intersection.x) / size);
+                y = Math.round((50 - intersection.y) / size);
+                b = world.buildings[y * world.size + x];
+                if (b !== 0) {
+                    building = buildings[b - 1];
+                    msg_banner.text(building.name + " (" + FACTIONS[building.affiliation] + ")");
+                    msg_banner.show();
+                    console.log(building.name, building.affiliation);
+                }
+            });
             tick();
         },
         function () {
