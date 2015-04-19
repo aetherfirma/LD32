@@ -3,7 +3,9 @@ function main() {
         msg_banner = $("#msg-banner"), status_banner = $("#status-banner"),
         time = 0, last_frame, paused = false, length_of_day = 30000, game_speed = 0.5,
         start_year = 2143, start_date = 56, m, next_year, calendar_day,
-        camera_location = {x: 0, y: 0}, camera_rotation = Math.PI/2, camera_zoom = 50;
+        camera_location = {x: 0, y: 0}, camera_rotation = Math.PI/2, camera_zoom = 50,
+        left_mouse_down = false, right_mouse_down = false, mouse_down_at,
+        mouse_at, mouse_last_at;
 
     function current_time() {
         var day, month, year, time_of_day, hour, minutes,
@@ -118,6 +120,42 @@ function main() {
         }
     }
 
+    function mouse_down(evt) {
+        if (evt.which == 1) {
+            left_mouse_down = true;
+            right_mouse_down = false;
+        } else if (evt.which == 3) {
+            right_mouse_down = true;
+            left_mouse_down = false;
+        } else {
+            return;
+        }
+        mouse_down_at = {x: evt.pageX, y: evt.pageY};
+        return false;
+    }
+
+    function mouse_up(evt) {
+        var mouse_up_at = {x: evt.pageX, y: evt.pageY};
+        if (evt.which == 1 && left_mouse_down && square_dist(mouse_down_at, mouse_up_at) < 100) left_click_handler(evt);
+        if (evt.which == 3 && right_mouse_down && square_dist(mouse_down_at, mouse_up_at) < 100) right_click_handler(evt);
+        if (evt.which == 1 || evt.which == 3) {
+            right_mouse_down = false;
+            left_mouse_down = false;
+            mouse_down_at = undefined;
+        } else {
+            return;
+        }
+        return false;
+    }
+
+    function left_click_handler(evt) {
+        console.log("left");
+    }
+
+    function right_click_handler(evt) {
+        console.log("right");
+    }
+
     var init_pipeline = [
         function () {
             msg_banner.html("Setting up the renderer");
@@ -164,7 +202,10 @@ function main() {
             document.body.appendChild(renderer.renderer.domElement);
             status_banner.show();
             last_frame = +new Date;
-            $("body").mousemove(mouse_move_handler);
+            var body = $("body");
+            body.mousemove(mouse_move_handler);
+            body.mousedown(mouse_down);
+            body.mouseup(mouse_up);
             tick();
         },
         function () {

@@ -33,3 +33,6 @@ function pad(n, width, z) {
     n = n + '';
     return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
+function square_dist(a, b) {
+    return ((b.x - a.x) * (b.x - a.x)) + ((b.y - a.y) * (b.y - a.y));
+}
