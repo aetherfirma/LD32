@@ -7,9 +7,10 @@ function main() {
         camera_location = {x: 0, y: 0}, camera_rotation = Math.PI/2, camera_zoom = 50,
         left_mouse_down = false, right_mouse_down = false, mouse_down_at,
         mouse_at, mouse_last_at,
-        player_building, destination_building,
+        player_building, handler_building,
         selected_building, desired_position,
-        player_building_marker,
+        player_building_marker, handler_building_marker,
+        generator, relay, sphere,
         schedule = [],
         described_building, travelling = false, handler_busy = false,
         building_select = new buzz.sound("sound/building-select", {formats: ["wav"]});;
@@ -161,6 +162,28 @@ function main() {
                 actions.append(action);
             }
 
+            if (building === handler_building) {
+                var leave;
+                leave = $("<a href='javascript:void'>Leave this city</a>");
+                leave.click(function () {
+                    if (relay === null && sphere === null && generator === null) {
+                        append_to_timeline(timeline_list, "You hand all three components of the XN47 to your handler. They place them in the case and congratulate you on a job well done. You board the shuttle and leave this planet, never to return. <strong>YOU WIN!</strong>");
+                    } else {
+                        append_to_timeline(
+                            timeline_list,
+                            "Your handler asks if this is some kind of joke." +
+                            (relay !== null ? " You still don't have the relay." : "") +
+                            (generator !== null ? " You still don't have the generator." : "") +
+                            (sphere !== null ? " You still don't have the sphere." : "") +
+                            " They storm off and slam the door. You think they're angry."
+                        )
+                    }
+                });
+                action = $("<li></li>");
+                action.append(leave);
+                actions.append(action);
+            }
+
             description.append(actions);
         }
 
@@ -169,7 +192,7 @@ function main() {
 
     function tick() {
         var now  = +new Date, dt = now - last_frame, time_of_day, new_camera_vector,
-            building, mouse_delta, movement_speed, dx, dy, rx, ry,  player_loc,
+            building, mouse_delta, movement_speed, dx, dy, rx, ry,  player_loc, handler_loc,
             temp_schedule, i, item;
         if (!paused) {
             time += dt * game_speed;
@@ -205,6 +228,10 @@ function main() {
         player_loc = map_xy_to_world_xy(player_building.location, 100/world.size);
         player_building_marker.position.set(player_loc.x, player_building.height * (100/world.size), player_loc.y);
         player_building_marker.rotation.y = time / 100;
+
+        handler_loc = map_xy_to_world_xy(handler_building.location, 100/world.size);
+        handler_building_marker.position.set(handler_loc.x, handler_building.height * (100/world.size), handler_loc.y);
+        handler_building_marker.rotation.y = time / 100;
 
         if (selected_building !== undefined) {
             if (described_building !== selected_building) {
@@ -387,6 +414,9 @@ function main() {
             player_building_marker = create_marker("^", 0xffffff);
             renderer.scene.add(player_building_marker);
 
+            handler_building_marker = create_marker("!", 0xffffff);
+            renderer.scene.add(handler_building_marker);
+
             game_window.mousemove(mouse_move_handler);
             game_window.mousedown(mouse_down);
             game_window.mouseup(mouse_up);
@@ -400,15 +430,24 @@ function main() {
 
             player_building = Array.choice(world.building_meshes).building;
             do {
-                destination_building = Array.choice(world.building_meshes).building;
-            } while (destination_building === player_building);
+                handler_building = Array.choice(world.building_meshes).building;
+            } while (handler_building === player_building);
+
+            generator = Array.choice(world.people);
+            do {
+                relay = Array.choice(world.people);
+            } while (relay === generator || relay.affiliation === generator.affiliation);
+            do {
+                sphere = Array.choice(world.people);
+            } while (sphere === generator || sphere === relay || sphere.affiliation === generator.affiliation || sphere.affiliation === relay.affiliation);
+
             selected_building = player_building;
             camera_location = map_xy_to_world_xy(player_building.location, 100/world.size);
             camera_zoom = 5;
 
             opening_dialogue  = "Last night you stole the XN47 experimental weapons platform from the Omnicorp HQ just outside the city of New Durum. ";
             opening_dialogue += "You fled via hovercraft and managed to make it into the city proper where you ducked into the lobby of " + player_building.name;
-            opening_dialogue += " where you have been hiding all night. You prepare to head on towards " + destination_building.name + " where your handler is ";
+            opening_dialogue += " where you have been hiding all night. You prepare to head on towards " + handler_building.name + " where your handler is ";
             opening_dialogue += "waiting for you when you notice your one of your bags have been stolen! You still have the body of the weapon, but the ";
             opening_dialogue += "<em>Window Generator</em>, the <em>Affirmation Relay</em> and most importantly the <em>Correction Sphere</em> are missing! ";
             opening_dialogue += "You search the CCTV and see that the <em>National Crime Agency</em>, agents from <em>Omnicorp</em> and the doomsday cult ";
